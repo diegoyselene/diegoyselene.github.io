@@ -6,7 +6,6 @@ import cors from "cors";
 const app = express();
 const PORT = 5000;
 
-// Replace with your Pexels API key
 const PEXELS_KEY = "c5JRSHU3S4Y9yYM9eg8lZ3twpVXbc4S7qWl92do2xbUUF1ex9BYy10dT";
 
 app.use(cors());
