@@ -1,70 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Music → Scrapbook</title>
-  <style>
-    :root{
-      --bg:#0b0f15; --bar:#05080c; --line:#343b44; --muted:#9aa3ad; --accent:#6ee7ff; --panel:#0d1116;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .top-bar{background:var(--bar);height:40px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--line)}
-    .title{font-size:14px;margin:0}
-    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
-    .controls label,.controls button,.controls select{
-      background:#0f1317;border:1px solid #1f252b;padding:6px 8px;border-radius:6px;
-      font-size:13px;color:var(--muted);cursor:pointer
-    }
-    .controls button.primary{color:var(--accent);border-color:rgba(110,231,255,0.12)}
-    .main{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100vh - 40px);padding:12px}
-    .left{background:#071017;border-radius:8px;overflow:auto;padding:8px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
-    .thumb{border-radius:6px;overflow:hidden;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4)}
-    .thumb img{height:auto;width:auto;max-width:300px;display:block;border-radius:6px}
-    .right{padding:12px;background:var(--panel);border-radius:8px;border:1px solid #0f1317;display:flex;flex-direction:column;gap:12px}
-    .section-title{font-size:13px;color:var(--muted);margin-bottom:6px}
-    .small{font-size:12px;color:var(--muted)}
-    .badge{padding:4px 8px;background:#081018;border-radius:6px;border:1px solid #122028;color:var(--muted);font-size:12px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Music → Scrapbook</title>
+<style>
+:root{
+  --bg:#0b0f15; --bar:#05080c; --line:#343b44; --muted:#9aa3ad; --accent:#6ee7ff; --panel:#0d1116;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+.top-bar{background:var(--bar);height:40px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--line)}
+.title{font-size:14px;margin:0}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.controls label,.controls button,.controls select{
+  background:#0f1317;border:1px solid #1f252b;padding:6px 8px;border-radius:6px;
+  font-size:13px;color:var(--muted);cursor:pointer
+}
+.controls button.primary{color:var(--accent);border-color:rgba(110,231,255,0.12)}
+.main{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100vh - 40px);padding:12px}
+.left{background:#071017;border-radius:8px;overflow:auto;padding:8px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.thumb{border-radius:6px;overflow:hidden;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4)}
+.thumb img{height:auto;width:auto;max-width:300px;display:block;border-radius:6px}
+.right{padding:12px;background:var(--panel);border-radius:8px;border:1px solid #0f1317;display:flex;flex-direction:column;gap:12px}
+.section-title{font-size:13px;color:var(--muted);margin-bottom:6px}
+.small{font-size:12px;color:var(--muted)}
+.badge{padding:4px 8px;background:#081018;border-radius:6px;border:1px solid #122028;color:var(--muted);font-size:12px}
+#playerControls input[type=range]{width:100%}
+</style>
 </head>
 <body>
-  <div class="top-bar">
-    <h1 class="title">Music → Scrapbook</h1>
-    <div class="controls">
-      <input id="file" type="file" accept="audio/*" style="display:none" />
-      <label for="file">Load audio</label>
-      <button id="playBtn" class="primary" disabled>Play</button>
-      <button id="pauseBtn" disabled>Pause</button>
-      <select id="sceneType">
-        <option value="Landscape">Landscape</option>
-        <option value="Person">Person</option>
-        <option value="City">City</option>
-        <option value="Fantasy">Fantasy</option>
-      </select>
-      <button id="genBtn">Generate Scrapbook</button>
-    </div>
+<div class="top-bar">
+  <h1 class="title">Music → Scrapbook</h1>
+  <div class="controls">
+    <input id="file" type="file" accept="audio/*" style="display:none" />
+    <label for="file">Load audio</label>
+    <button id="playBtn" class="primary" disabled>Play</button>
+    <button id="pauseBtn" disabled>Pause</button>
+    <select id="sceneType">
+      <option value="Landscape">Landscape</option>
+      <option value="Person">Person</option>
+      <option value="City">City</option>
+      <option value="Fantasy">Fantasy</option>
+    </select>
+    <button id="genBtn">Generate Scrapbook</button>
   </div>
+</div>
 
-  <div class="main">
+<div class="main">
   <div class="left" id="gallery"></div>
-  <div class="right">      
+  <div class="right">
     <div class="section-title">Loaded Audio</div>
     <div id="audioName" class="small">No file loaded</div>
-    
+
+    <div class="section-title">Audio Player</div>
+    <div id="playerControls" class="small">
+      <input type="range" id="seekBar" min="0" max="100" value="0">
+      <div><span id="currentTime">0:00</span> / <span id="duration">0:00</span></div>
+    </div>
+
+    <div class="section-title">Live Prompt</div>
+    <div id="livePrompt" class="small">No prompt yet</div>
+
     <div class="section-title">Prompt used</div>
     <div id="promptText" class="small">No prompt yet</div>
   </div>
 </div>
 
-  </div>
-
 <script>
 const gallery = document.getElementById('gallery');
-const status = document.getElementById('status');
-let audioCtx, analyser, sourceNode, dataArray, bufferLength, mediaElement;
+const seekBar = document.getElementById('seekBar');
+const currentTimeEl = document.getElementById('currentTime');
+const durationEl = document.getElementById('duration');
+const livePromptEl = document.getElementById('livePrompt');
 
-// Hardcoded Pexels API key
+let audioCtx, analyser, sourceNode, dataArray, timeArray, bufferLength, mediaElement;
+
+// Pexels API key (replace with your own)
 const PEXELS_KEY = 'c5JRSHU3S4Y9yYM9eg8lZ3twpVXbc4S7qWl92do2xbUUF1ex9BYy10dT';
 
 // ---------------- AUDIO SETUP ----------------
@@ -72,9 +84,11 @@ function ensureAudioCtx(){
   if(!audioCtx){
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.8;
     bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
+    timeArray = new Uint8Array(bufferLength);
   }
 }
 function connectSource(node){
@@ -88,38 +102,76 @@ function connectSource(node){
 }
 
 // ---------------- FEATURE EXTRACTION ----------------
-function getFeatures(){
-  if(!analyser) return null;
+function getFeatures() {
+  if(!analyser) return {};
+
   analyser.getByteFrequencyData(dataArray);
-  let sum=0, low=0, mid=0, high=0;
+  analyser.getByteTimeDomainData(timeArray);
+
+  let sum=0, low=0, mid=0, high=0, peak=0, zc=0, prev=128;
   for(let i=0;i<dataArray.length;i++){
-    sum += dataArray[i]*dataArray[i];
-    if(i<dataArray.length*0.1) low+=dataArray[i];
-    else if(i<dataArray.length*0.4) mid+=dataArray[i];
-    else high+=dataArray[i];
+    const val = dataArray[i];
+    sum += val*val;
+
+    if(i<dataArray.length*0.1) low+=val;
+    else if(i<dataArray.length*0.4) mid+=val;
+    else high+=val;
+
+    if(val>peak) peak=val;
+
+    const tval = timeArray[i];
+    if((tval-128)*(prev-128)<0) zc++;
+    prev = tval;
   }
-  const energy = Math.min(1,Math.sqrt(sum/dataArray.length)/255);
-  const mood = energy>0.5?'energetic':'calm';
-  const genre = low>mid?'bass-heavy':'ambient';
-  return {mood,genre};
+
+  const rms = Math.sqrt(sum/dataArray.length);
+  const energy = Math.min(1, rms/128);
+  const centroid = dataArray.reduce((a,v,i)=>a+i*v,0)/(sum||1)/dataArray.length;
+  const spread = dataArray.reduce((a,v,i)=>a+v*Math.pow(i-centroid,2),0)/(sum||1)/dataArray.length;
+  const rhythm = peak/128;
+  const total = low+mid+high;
+  const bassRatio = low/total;
+  const midRatio = mid/total;
+  const trebleRatio = high/total;
+  const zcr = zc/dataArray.length;
+  const dynamic = Math.min(1, (peak-rms)/128);
+
+  return {energy, centroid, spread, rhythm, bassRatio, midRatio, trebleRatio, zcr, dynamic};
 }
 
 // ---------------- QUERY BUILDER ----------------
 function buildQuery(features){
   const scene = document.getElementById('sceneType').value;
   let query = scene;
-  if(features){
-    if(features.mood==='energetic') query += ' vibrant lively neon';
-    else query += ' calm peaceful soft light';
-    if(features.genre==='bass-heavy') query += ' night city club';
-    else query += ' nature dreamy landscape';
-  }
-  console.log("Generated query:", query); // <-- prints query
+  if(!features) return query;
+
+  let moodWords=[];
+  if(features.energy>0.7) moodWords.push("explosive","vibrant");
+  else if(features.energy>0.4) moodWords.push("uplifting");
+  else moodWords.push("calm","serene");
+
+  if(features.centroid>0.6) moodWords.push("bright","sparkling");
+  else moodWords.push("muted","soft");
+
+  if(features.rhythm>0.6) moodWords.push("dynamic","pulsating");
+  else if(features.rhythm>0.3) moodWords.push("flowing","gentle");
+
+  if(features.spread>0.1) moodWords.push("textured","complex");
+  else moodWords.push("smooth","simple");
+
+  if(features.dynamic>0.5) moodWords.push("intense","dramatic");
+  else moodWords.push("soft","subtle");
+
+  if(features.zcr>0.1) moodWords.push("crisp","sharp");
+  else moodWords.push("rounded","soft");
+
+  query += " "+moodWords.join(" ");
   return query;
 }
 
 // ---------------- SCRAPBOOK PUSH ----------------
 function pushImages(photos,query){
+  gallery.innerHTML='';
   photos.forEach(p=>{
     const div = document.createElement('div'); div.className='thumb';
     const img = document.createElement('img');
@@ -134,59 +186,76 @@ function pushImages(photos,query){
 async function generateScrapbook(){
   const features = getFeatures();
   const query = buildQuery(features);
-
-  // Show prompt in the right panel
   document.getElementById('promptText').textContent = query;
 
   try{
-    const res = await fetch(`http://localhost:5000/api/images?q=${encodeURIComponent(query)}`);
+    const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=6`,{
+      headers:{Authorization:PEXELS_KEY}
+    });
     if(!res.ok) throw new Error(`API error ${res.status}`);
     const data = await res.json();
-
-    if (!data.photos || data.photos.length === 0) {
-      console.log('No images found');
-      return;
-    }
-
-    gallery.innerHTML = '';
+    if(!data.photos || data.photos.length===0) return;
     pushImages(data.photos, query);
-    console.log('Scrapbook generated');
   } catch(err){
     console.error(err);
-    alert("Image fetch failed. Make sure your backend is running at http://localhost:5000");
+    alert("Image fetch failed. Make sure your API key is correct.");
   }
 }
 
-
-
-// ---------------- FILE INPUT ----------------
+// ---------------- AUDIO FILE ----------------
 document.getElementById('file').addEventListener('change', e => {
   const file = e.target.files?.[0];
-  if (!file) return;
+  if(!file) return;
 
-  // Display the audio file name
   document.getElementById('audioName').textContent = file.name;
 
   if(!mediaElement) mediaElement = new Audio();
   mediaElement.src = URL.createObjectURL(file);
   mediaElement.crossOrigin = "anonymous";
-  mediaElement.onloadedmetadata = () => {
+
+  mediaElement.onloadedmetadata = ()=>{
+    durationEl.textContent = formatTime(mediaElement.duration);
+
     ensureAudioCtx();
     const track = audioCtx.createMediaElementSource(mediaElement);
     connectSource(track);
+
+    // ---------------- LIVE PLAYER ----------------
+    mediaElement.addEventListener('timeupdate', ()=>{
+      const current = mediaElement.currentTime;
+      const duration = mediaElement.duration || 0;
+
+      currentTimeEl.textContent = formatTime(current);
+      seekBar.value = duration>0 ? (current/duration)*100 : 0;
+
+      // Live prompt update
+      const features = getFeatures();
+      if(features) livePromptEl.textContent = buildQuery(features);
+    });
+
     mediaElement.play();
   };
 });
 
+// ---------------- PLAYER CONTROLS ----------------
+function formatTime(sec){
+  const m = Math.floor(sec/60);
+  const s = Math.floor(sec%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
 
-// ---------------- BUTTONS ----------------
-document.getElementById('playBtn').addEventListener('click',async()=>{
+seekBar.addEventListener('input', ()=>{
+  if(!mediaElement) return;
+  mediaElement.currentTime = (seekBar.value/100)*(mediaElement.duration||0);
+});
+
+document.getElementById('playBtn').addEventListener('click', async ()=>{
   if(!audioCtx) return;
   if(audioCtx.state==='suspended') await audioCtx.resume();
   mediaElement?.play();
 });
-document.getElementById('pauseBtn').addEventListener('click',()=>{ mediaElement?.pause(); });
-document.getElementById('genBtn').addEventListener('click',generateScrapbook);
+document.getElementById('pauseBtn').addEventListener('click', ()=>mediaElement?.pause());
+document.getElementById('genBtn').addEventListener('click', generateScrapbook);
 </script>
 </body>
 </html>
