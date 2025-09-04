@@ -1,202 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Audio → Scrapbook</title>
-<style>
-:root{
-  --bg:#0b0f15; --bar:#05080c; --line:#343b44; --muted:#9aa3ad; --accent:#6ee7ff; --panel:#0d1116;
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-.top-bar{background:var(--bar);height:40px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--line)}
-.title{font-size:14px;margin:0}
-.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
-.controls label,.controls button,.controls select,.controls input{background:#0f1317;border:1px solid #1f252b;padding:6px 8px;border-radius:6px;font-size:13px;color:var(--muted);cursor:pointer}
-.controls button.primary{color:var(--accent);border-color:rgba(110,231,255,0.12)}
-.main{display:grid;grid-template-columns:1fr 420px;gap:12px;height:calc(100vh - 40px);padding:12px}
-.left{background:#071017;position:relative;border-radius:8px;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;padding:8px}
-.right{width:420px;padding:12px;background:var(--panel);border-radius:8px;border:1px solid #0f1317;display:flex;flex-direction:column;gap:12px}
-.panel{background:transparent;padding:8px;border-radius:6px}
-.section-title{font-size:13px;color:var(--muted);margin-bottom:6px}
-.thumb{border-radius:6px;flex:1 0 48%;overflow:hidden;position:relative;height:200px}
-.thumb img{width:100%;height:100%;object-fit:cover;cursor:pointer}
-canvas#viz{width:100%;height:150px;background:#0d1116;border-radius:6px}
-.footer{margin-top:auto;font-size:12px;color:var(--muted);text-align:center}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Music → Scrapbook</title>
+  <style>
+    :root{
+      --bg:#0b0f15; --bar:#05080c; --line:#343b44; --muted:#9aa3ad; --accent:#6ee7ff; --panel:#0d1116;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .top-bar{background:var(--bar);height:40px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--line)}
+    .title{font-size:14px;margin:0}
+    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .controls label,.controls button,.controls select{
+      background:#0f1317;border:1px solid #1f252b;padding:6px 8px;border-radius:6px;
+      font-size:13px;color:var(--muted);cursor:pointer
+    }
+    .controls button.primary{color:var(--accent);border-color:rgba(110,231,255,0.12)}
+    .main{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100vh - 40px);padding:12px}
+    .left{background:#071017;border-radius:8px;overflow:auto;padding:8px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+    .thumb{border-radius:6px;overflow:hidden;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4)}
+    .thumb img{height:auto;width:auto;max-width:300px;display:block;border-radius:6px}
+    .right{padding:12px;background:var(--panel);border-radius:8px;border:1px solid #0f1317;display:flex;flex-direction:column;gap:12px}
+    .section-title{font-size:13px;color:var(--muted);margin-bottom:6px}
+    .small{font-size:12px;color:var(--muted)}
+    .badge{padding:4px 8px;background:#081018;border-radius:6px;border:1px solid #122028;color:var(--muted);font-size:12px}
+  </style>
 </head>
 <body>
-
-<div class="top-bar">
-  <h1 class="title">Audio → Scrapbook</h1>
-  <div class="controls">
-    <input id="file" type="file" accept="audio/*" style="display:none"/>
-    <label for="file">Load audio</label>
-    <button id="playBtn" class="primary" disabled>Play</button>
-    <button id="pauseBtn" disabled>Pause</button>
-    <select id="sceneType">
-      <option value="Landscape">Landscape</option>
-      <option value="Person">Person</option>
-      <option value="City">City</option>
-      <option value="Fantasy">Fantasy</option>
-    </select>
-    <button id="genBtn">Get Images</button>
-    <input id="apiKey" placeholder="c5JRSHU3S4Y9yYM9eg8lZ3twpVXbc4S7qWl92do2xbUUF1ex9BYy10dT" style="width:150px"/>
-    <div class="badge" id="status">idle</div>
-  </div>
-</div>
-
-<div class="main">
-  <div class="left" id="gallery"></div>
-
-  <div class="right">
-    <div class="panel">
-      <div class="section-title">Audio Visualizer</div>
-      <canvas id="viz"></canvas>
+  <div class="top-bar">
+    <h1 class="title">Music → Scrapbook</h1>
+    <div class="controls">
+      <input id="file" type="file" accept="audio/*" style="display:none" />
+      <label for="file">Load audio</label>
+      <button id="playBtn" class="primary" disabled>Play</button>
+      <button id="pauseBtn" disabled>Pause</button>
+      <select id="sceneType">
+        <option value="Landscape">Landscape</option>
+        <option value="Person">Person</option>
+        <option value="City">City</option>
+        <option value="Fantasy">Fantasy</option>
+      </select>
+      <button id="genBtn">Generate Scrapbook</button>
     </div>
-    <div class="footer">Scrapbook style — images respond to audio features</div>
+  </div>
+
+  <div class="main">
+  <div class="left" id="gallery"></div>
+  <div class="right">      
+    <div class="section-title">Loaded Audio</div>
+    <div id="audioName" class="small">No file loaded</div>
+    
+    <div class="section-title">Prompt used</div>
+    <div id="promptText" class="small">No prompt yet</div>
   </div>
 </div>
+
+  </div>
 
 <script>
-const fileInput=document.getElementById('file');
-const playBtn=document.getElementById('playBtn');
-const pauseBtn=document.getElementById('pauseBtn');
-const genBtn=document.getElementById('genBtn');
-const sceneSelect=document.getElementById('sceneType');
-const apiKeyInput=document.getElementById('apiKey');
-const status=document.getElementById('status');
-const gallery=document.getElementById('gallery');
+const gallery = document.getElementById('gallery');
+const status = document.getElementById('status');
+let audioCtx, analyser, sourceNode, dataArray, bufferLength, mediaElement;
 
-let audioCtx, analyser, sourceNode, dataArray, bufferLength;
-let mediaElement;
+// Hardcoded Pexels API key
+const PEXELS_KEY = 'c5JRSHU3S4Y9yYM9eg8lZ3twpVXbc4S7qWl92do2xbUUF1ex9BYy10dT';
 
-// ---------------- Audio ----------------
+// ---------------- AUDIO SETUP ----------------
 function ensureAudioCtx(){
   if(!audioCtx){
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    analyser=audioCtx.createAnalyser();
-    analyser.fftSize=2048;
-    bufferLength=analyser.frequencyBinCount;
-    dataArray=new Uint8Array(bufferLength);
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
   }
 }
 function connectSource(node){
   ensureAudioCtx();
   if(sourceNode) sourceNode.disconnect();
-  sourceNode=node;
+  sourceNode = node;
   sourceNode.connect(analyser);
   analyser.connect(audioCtx.destination);
-  playBtn.disabled=false;
-  pauseBtn.disabled=false;
+  document.getElementById('playBtn').disabled=false;
+  document.getElementById('pauseBtn').disabled=false;
 }
 
-// ---------------- Audio Features ----------------
+// ---------------- FEATURE EXTRACTION ----------------
 function getFeatures(){
   if(!analyser) return null;
   analyser.getByteFrequencyData(dataArray);
-  let sum=0,low=0,mid=0,high=0;
+  let sum=0, low=0, mid=0, high=0;
   for(let i=0;i<dataArray.length;i++){
-    sum+=dataArray[i]*dataArray[i];
-    if(i<bufferLength*0.1) low+=dataArray[i];
-    else if(i<bufferLength*0.4) mid+=dataArray[i];
+    sum += dataArray[i]*dataArray[i];
+    if(i<dataArray.length*0.1) low+=dataArray[i];
+    else if(i<dataArray.length*0.4) mid+=dataArray[i];
     else high+=dataArray[i];
   }
-  const energy=Math.min(1, Math.sqrt(sum/bufferLength)/255);
+  const energy = Math.min(1,Math.sqrt(sum/dataArray.length)/255);
   const mood = energy>0.5?'energetic':'calm';
-  const genre = low>mid?'bass-heavy':'dark';
+  const genre = low>mid?'bass-heavy':'ambient';
   return {mood,genre};
 }
 
-// ---------------- Particles ----------------
-const viz=document.getElementById('viz');
-const ctx=viz.getContext('2d');
-let particles=[];
-function resizeCanvas(){viz.width=viz.clientWidth; viz.height=viz.clientHeight; initParticles();}
-window.addEventListener('resize',resizeCanvas);
-resizeCanvas();
-function initParticles(){
-  particles=[];
-  for(let i=0;i<200;i++){
-    particles.push({x:Math.random()*viz.width,y:Math.random()*viz.height,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,hue:Math.random()*360,size:1+Math.random()*2});
-  }
-}
-function drawParticles(){
-  requestAnimationFrame(drawParticles);
-  ctx.globalCompositeOperation='source-over';
-  ctx.fillStyle='rgba(11,15,21,0.2)';
-  ctx.fillRect(0,0,viz.width,viz.height);
-  ctx.globalCompositeOperation='lighter';
-  for(const p of particles){
-    p.x+=p.vx; p.y+=p.vy; p.hue+=0.2;
-    if(p.x<0)p.x=viz.width;if(p.x>viz.width)p.x=0;
-    if(p.y<0)p.y=viz.height;if(p.y>viz.height)p.y=0;
-    ctx.fillStyle=`hsla(${p.hue},80%,60%,0.5)`;
-    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
-  }
-}
-drawParticles();
-
-// ---------------- Build query ----------------
+// ---------------- QUERY BUILDER ----------------
 function buildQuery(features){
-  let query = sceneSelect.value;
+  const scene = document.getElementById('sceneType').value;
+  let query = scene;
   if(features){
-    query += features.mood==='energetic'?' vibrant lively':' calm peaceful';
-    query += features.genre==='bass-heavy'?' night music':' ambient';
+    if(features.mood==='energetic') query += ' vibrant lively neon';
+    else query += ' calm peaceful soft light';
+    if(features.genre==='bass-heavy') query += ' night city club';
+    else query += ' nature dreamy landscape';
   }
+  console.log("Generated query:", query); // <-- prints query
   return query;
 }
 
-// ---------------- Fetch Pexels images ----------------
-async function getPexelsImages(){
-  const key=apiKeyInput.value.trim();
-  if(!key){alert("Enter Pexels API Key"); return;}
-  const features=getFeatures();
-  const query=buildQuery(features);
-  status.textContent='loading...';
+// ---------------- SCRAPBOOK PUSH ----------------
+function pushImages(photos,query){
+  photos.forEach(p=>{
+    const div = document.createElement('div'); div.className='thumb';
+    const img = document.createElement('img');
+    img.src = p.src.large2x; img.alt = query; img.title = query;
+    div.appendChild(img);
+    div.addEventListener('click',()=>window.open(p.url,'_blank'));
+    gallery.appendChild(div);
+  });
+}
+
+// ---------------- IMAGE FETCH ----------------
+async function generateScrapbook(){
+  const features = getFeatures();
+  const query = buildQuery(features);
+
+  // Show prompt in the right panel
+  document.getElementById('promptText').textContent = query;
+
   try{
-    const resp=await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=12`,{
-      headers:{Authorization:key}
-    });
-    if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-    const data=await resp.json();
-    gallery.innerHTML='';
-    data.photos.forEach(p=>{
-      const div=document.createElement('div'); div.className='thumb';
-      const img=document.createElement('img');
-      img.src=p.src.medium;
-      img.alt=query;
-      div.appendChild(img);
-      div.addEventListener('click',()=>window.open(p.url,'_blank'));
-      gallery.appendChild(div);
-    });
-    status.textContent='idle';
-  }catch(err){
+    const res = await fetch(`http://localhost:5000/api/images?q=${encodeURIComponent(query)}`);
+    if(!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+
+    if (!data.photos || data.photos.length === 0) {
+      console.log('No images found');
+      return;
+    }
+
+    gallery.innerHTML = '';
+    pushImages(data.photos, query);
+    console.log('Scrapbook generated');
+  } catch(err){
     console.error(err);
-    status.textContent='error';
-    alert('Image fetch failed. Check API key and network.');
+    alert("Image fetch failed. Make sure your backend is running at http://localhost:5000");
   }
 }
 
-// ---------------- File input ----------------
-fileInput.addEventListener('change',e=>{
-  const file=e.target.files?.[0]; if(!file) return;
-  if(!mediaElement) mediaElement=new Audio();
-  mediaElement.src=URL.createObjectURL(file);
-  mediaElement.crossOrigin="anonymous";
-  mediaElement.onloadedmetadata=()=>{
+
+
+// ---------------- FILE INPUT ----------------
+document.getElementById('file').addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // Display the audio file name
+  document.getElementById('audioName').textContent = file.name;
+
+  if(!mediaElement) mediaElement = new Audio();
+  mediaElement.src = URL.createObjectURL(file);
+  mediaElement.crossOrigin = "anonymous";
+  mediaElement.onloadedmetadata = () => {
     ensureAudioCtx();
-    const track=audioCtx.createMediaElementSource(mediaElement);
+    const track = audioCtx.createMediaElementSource(mediaElement);
     connectSource(track);
     mediaElement.play();
   };
 });
 
-// ---------------- Buttons ----------------
-playBtn.addEventListener('click',async()=>{if(audioCtx.state==='suspended')await audioCtx.resume(); mediaElement?.play();});
-pauseBtn.addEventListener('click',()=>{mediaElement?.pause();});
-genBtn.addEventListener('click',getPexelsImages);
+
+// ---------------- BUTTONS ----------------
+document.getElementById('playBtn').addEventListener('click',async()=>{
+  if(!audioCtx) return;
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+  mediaElement?.play();
+});
+document.getElementById('pauseBtn').addEventListener('click',()=>{ mediaElement?.pause(); });
+document.getElementById('genBtn').addEventListener('click',generateScrapbook);
 </script>
 </body>
 </html>

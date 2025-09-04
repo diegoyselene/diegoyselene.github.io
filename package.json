@@ -1,0 +1,23 @@
+{
+  "name": "pexels-proxy",
+  "version": "1.0.0",
+  "description": "Backend proxy for Pexels image API",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "pexels",
+    "proxy",
+    "images",
+    "api"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2"
+  }
+}
