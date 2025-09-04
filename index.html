@@ -75,11 +75,10 @@ const durationEl = document.getElementById('duration');
 const livePromptEl = document.getElementById('livePrompt');
 
 let audioCtx, analyser, sourceNode, dataArray, timeArray, bufferLength, mediaElement;
-
-// Pexels API key (replace with your own)
+const usedImageIds = new Set();
 const PEXELS_KEY = 'c5JRSHU3S4Y9yYM9eg8lZ3twpVXbc4S7qWl92do2xbUUF1ex9BYy10dT';
 
-// ---------------- AUDIO SETUP ----------------
+// ---------------- AUDIO ----------------
 function ensureAudioCtx(){
   if(!audioCtx){
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -101,88 +100,90 @@ function connectSource(node){
   document.getElementById('pauseBtn').disabled=false;
 }
 
-// ---------------- FEATURE EXTRACTION ----------------
+// ---------------- FEATURES ----------------
 function getFeatures() {
   if(!analyser) return {};
-
   analyser.getByteFrequencyData(dataArray);
   analyser.getByteTimeDomainData(timeArray);
 
   let sum=0, low=0, mid=0, high=0, peak=0, zc=0, prev=128;
+  let fluxSum=0, prevSpectrum=new Float32Array(bufferLength);
   for(let i=0;i<dataArray.length;i++){
-    const val = dataArray[i];
-    sum += val*val;
-
+    const val = dataArray[i]; sum += val*val;
     if(i<dataArray.length*0.1) low+=val;
     else if(i<dataArray.length*0.4) mid+=val;
     else high+=val;
-
     if(val>peak) peak=val;
-
     const tval = timeArray[i];
     if((tval-128)*(prev-128)<0) zc++;
     prev = tval;
+    fluxSum += Math.abs(val - prevSpectrum[i]);
+    prevSpectrum[i] = val;
   }
 
   const rms = Math.sqrt(sum/dataArray.length);
   const energy = Math.min(1, rms/128);
+  const dynamicRange = Math.min(1, (peak-rms)/128);
   const centroid = dataArray.reduce((a,v,i)=>a+i*v,0)/(sum||1)/dataArray.length;
   const spread = dataArray.reduce((a,v,i)=>a+v*Math.pow(i-centroid,2),0)/(sum||1)/dataArray.length;
   const rhythm = peak/128;
-  const total = low+mid+high;
-  const bassRatio = low/total;
-  const midRatio = mid/total;
-  const trebleRatio = high/total;
+  const bassRatio = low/(low+mid+high);
+  const midRatio = mid/(low+mid+high);
+  const trebleRatio = high/(low+mid+high);
   const zcr = zc/dataArray.length;
-  const dynamic = Math.min(1, (peak-rms)/128);
-
-  return {energy, centroid, spread, rhythm, bassRatio, midRatio, trebleRatio, zcr, dynamic};
+  const spectralFlux = fluxSum/dataArray.length;
+  const tempoEst = rhythm*180;
+  const tonality = bassRatio<0.5&&trebleRatio<0.5?0.7:0.3;
+  const pitch = centroid;
+  return {energy,dynamicRange,centroid,spread,rhythm,bassRatio,midRatio,trebleRatio,zcr,spectralFlux,tempoEst,tonality,pitch};
 }
 
 // ---------------- QUERY BUILDER ----------------
+function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 function buildQuery(features){
+  if(!features) return "";
   const scene = document.getElementById('sceneType').value;
-  let query = scene;
-  if(!features) return query;
+  let adjectives=[];
+  adjectives.push(pickRandom(features.energy>0.8?["explosive","vibrant"]:features.energy>0.5?["lively","uplifting"]:["calm","serene"]));
+  adjectives.push(pickRandom(features.dynamicRange>0.5?["dramatic","intense"]:["subtle","soft"]));
+  adjectives.push(pickRandom(features.centroid>0.7?["sparkling","shiny"]:features.centroid>0.4?["bright","soft-light"]:["muted","dark"]));
+  adjectives.push(pickRandom(features.spread>0.15?["textured","complex"]:["smooth","simple"]));
+  adjectives.push(pickRandom(features.tempoEst>120?["fast-paced","energetic"]:features.tempoEst>70?["moderate","steady"]:["slow","calm"]));
+  adjectives.push(pickRandom(features.rhythm>0.6?["pulsating","dynamic"]:["flowing","gentle"]));
+  adjectives.push(pickRandom(features.tonality>0.5?["melodic","harmonic"]:["ambient","airy"]));
+  adjectives.push(pickRandom(features.pitch>0.6?["high-pitched","treble-rich"]:features.pitch>0.3?["mid-range","balanced"]:["low-pitched","bass-heavy"]));
+  if(features.bassRatio>0.4) adjectives.push(pickRandom(["bass-heavy","club","deep"]));
+  else if(features.midRatio>0.4) adjectives.push(pickRandom(["vocal-centric","stage","concert"]));
+  else if(features.trebleRatio>0.4) adjectives.push(pickRandom(["airy","bright","open"]));
+  adjectives.push(pickRandom(features.zcr>0.1?["crisp","sharp"]:["soft","rounded"]));
 
-  let moodWords=[];
-  if(features.energy>0.7) moodWords.push("explosive","vibrant");
-  else if(features.energy>0.4) moodWords.push("uplifting");
-  else moodWords.push("calm","serene");
-
-  if(features.centroid>0.6) moodWords.push("bright","sparkling");
-  else moodWords.push("muted","soft");
-
-  if(features.rhythm>0.6) moodWords.push("dynamic","pulsating");
-  else if(features.rhythm>0.3) moodWords.push("flowing","gentle");
-
-  if(features.spread>0.1) moodWords.push("textured","complex");
-  else moodWords.push("smooth","simple");
-
-  if(features.dynamic>0.5) moodWords.push("intense","dramatic");
-  else moodWords.push("soft","subtle");
-
-  if(features.zcr>0.1) moodWords.push("crisp","sharp");
-  else moodWords.push("rounded","soft");
-
-  query += " "+moodWords.join(" ");
-  return query;
+  // Add segment info to force unique query
+  const segment = Math.floor(mediaElement.currentTime/5);
+  return scene + " " + adjectives.join(" ") + " segment-" + segment;
 }
 
-// ---------------- SCRAPBOOK PUSH ----------------
-function pushImages(photos,query){
-  gallery.innerHTML='';
-  photos.forEach(p=>{
-    const div = document.createElement('div'); div.className='thumb';
+// ---------------- SCRAPBOOK ----------------
+function pushImages(photos, query) {
+  photos.forEach(p => {
+    if (usedImageIds.has(p.id)) return; // deduplicate
+    usedImageIds.add(p.id);
+
+    const div = document.createElement('div');
+    div.className = 'thumb';
     const img = document.createElement('img');
-    img.src = p.src.large2x; img.alt = query; img.title = query;
+    img.src = p.src.large2x;
+    img.alt = query;
+    img.title = query;
     div.appendChild(img);
-    div.addEventListener('click',()=>window.open(p.url,'_blank'));
-    gallery.appendChild(div);
+
+    div.addEventListener('click', () => window.open(p.url, '_blank'));
+
+    // Prepend instead of append to show newest images at top
+    gallery.prepend(div);
   });
 }
 
-// ---------------- IMAGE FETCH ----------------
+
 async function generateScrapbook(){
   const features = getFeatures();
   const query = buildQuery(features);
@@ -196,39 +197,32 @@ async function generateScrapbook(){
     const data = await res.json();
     if(!data.photos || data.photos.length===0) return;
     pushImages(data.photos, query);
-  } catch(err){
-    console.error(err);
-    alert("Image fetch failed. Make sure your API key is correct.");
-  }
+  } catch(err){ console.error(err); alert("Image fetch failed."); }
 }
 
 // ---------------- AUDIO FILE ----------------
-document.getElementById('file').addEventListener('change', e => {
-  const file = e.target.files?.[0];
-  if(!file) return;
-
+document.getElementById('file').addEventListener('change', e=>{
+  const file = e.target.files?.[0]; if(!file) return;
   document.getElementById('audioName').textContent = file.name;
 
-  if(!mediaElement) mediaElement = new Audio();
+  if(!mediaElement) mediaElement=new Audio();
   mediaElement.src = URL.createObjectURL(file);
-  mediaElement.crossOrigin = "anonymous";
+  mediaElement.crossOrigin="anonymous";
 
   mediaElement.onloadedmetadata = ()=>{
     durationEl.textContent = formatTime(mediaElement.duration);
-
     ensureAudioCtx();
     const track = audioCtx.createMediaElementSource(mediaElement);
     connectSource(track);
 
-    // ---------------- LIVE PLAYER ----------------
+    // live player updates
     mediaElement.addEventListener('timeupdate', ()=>{
       const current = mediaElement.currentTime;
       const duration = mediaElement.duration || 0;
-
       currentTimeEl.textContent = formatTime(current);
       seekBar.value = duration>0 ? (current/duration)*100 : 0;
 
-      // Live prompt update
+      // live prompt
       const features = getFeatures();
       if(features) livePromptEl.textContent = buildQuery(features);
     });
@@ -237,23 +231,10 @@ document.getElementById('file').addEventListener('change', e => {
   };
 });
 
-// ---------------- PLAYER CONTROLS ----------------
-function formatTime(sec){
-  const m = Math.floor(sec/60);
-  const s = Math.floor(sec%60);
-  return `${m}:${s.toString().padStart(2,'0')}`;
-}
-
-seekBar.addEventListener('input', ()=>{
-  if(!mediaElement) return;
-  mediaElement.currentTime = (seekBar.value/100)*(mediaElement.duration||0);
-});
-
-document.getElementById('playBtn').addEventListener('click', async ()=>{
-  if(!audioCtx) return;
-  if(audioCtx.state==='suspended') await audioCtx.resume();
-  mediaElement?.play();
-});
+// ---------------- PLAYER ----------------
+function formatTime(sec){ const m=Math.floor(sec/60); const s=Math.floor(sec%60); return `${m}:${s.toString().padStart(2,'0')}`; }
+seekBar.addEventListener('input', ()=>{ if(!mediaElement) return; mediaElement.currentTime = (seekBar.value/100)*(mediaElement.duration||0); });
+document.getElementById('playBtn').addEventListener('click', async ()=>{ if(!audioCtx) return; if(audioCtx.state==='suspended') await audioCtx.resume(); mediaElement?.play(); });
 document.getElementById('pauseBtn').addEventListener('click', ()=>mediaElement?.pause());
 document.getElementById('genBtn').addEventListener('click', generateScrapbook);
 </script>
