@@ -33,7 +33,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:syste
 <div class="top-bar">
   <h1 class="title">Music → Scrapbook</h1>
   <div class="controls">
-    <input id="file" type="file" accept="audio/*" style="display:none" />
+    <input id="file" type="file" accept=".mp3,.wav,.ogg,audio/*,video/*,video/mp4,video/webm,video/ogg" style="display:none" />
     <label for="file">Load audio</label>
     <button id="playBtn" class="primary" disabled>Play</button>
     <button id="pauseBtn" disabled>Pause</button>
@@ -152,7 +152,7 @@ function buildQuery(features){
   adjectives.push(pickRandom(features.rhythm>0.6?["pulsating","dynamic"]:["flowing","gentle"]));
   adjectives.push(pickRandom(features.tonality>0.5?["melodic","harmonic"]:["ambient","airy"]));
   adjectives.push(pickRandom(features.pitch>0.6?["high-pitched","treble-rich"]:features.pitch>0.3?["mid-range","balanced"]:["low-pitched","bass-heavy"]));
-  if(features.bassRatio>0.4) adjectives.push(pickRandom(["bass-heavy","club","deep"]));
+  if(features.bassRatio>0.4) adjectives.push(pickRandom(["bass-heavy","club","deep", "dark"]));
   else if(features.midRatio>0.4) adjectives.push(pickRandom(["vocal-centric","stage","concert"]));
   else if(features.trebleRatio>0.4) adjectives.push(pickRandom(["airy","bright","open"]));
   adjectives.push(pickRandom(features.zcr>0.1?["crisp","sharp"]:["soft","rounded"]));
