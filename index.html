@@ -29,6 +29,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:syste
 .small{font-size:12px;color:var(--muted)}
 .badge{padding:4px 8px;background:#081018;border-radius:6px;border:1px solid #122028;color:var(--muted);font-size:12px}
 #playerControls input[type=range]{width:100%}
+#spectrum,#waveform{width:100%;background:#05080c;border-radius:6px;display:block;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -44,6 +45,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:syste
       <option value="Person">Person</option>
       <option value="City">City</option>
       <option value="Fantasy">Fantasy</option>
+      <option value="Scene">Scene</option>
     </select>
     <button id="genBtn">Generate Scrapbook</button>
   </div>
@@ -61,6 +63,11 @@ html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:syste
       <div><span id="currentTime">0:00</span> / <span id="duration">0:00</span></div>
     </div>
 
+    <div class="section-title">Feature Visualizer</div>
+    <canvas id="spectrum" width="280" height="60"></canvas>
+    <canvas id="waveform" width="280" height="60"></canvas>
+    <div id="moodLabel" class="badge">Mood: Neutral</div>
+
     <div class="section-title">Live Prompt</div>
     <div id="livePrompt" class="small">No prompt yet</div>
 
@@ -75,6 +82,7 @@ const seekBar = document.getElementById('seekBar');
 const currentTimeEl = document.getElementById('currentTime');
 const durationEl = document.getElementById('duration');
 const livePromptEl = document.getElementById('livePrompt');
+const moodLabel = document.getElementById('moodLabel');
 
 let audioCtx, analyser, sourceNode, dataArray, timeArray, bufferLength, mediaElement;
 const usedImageIds = new Set();
@@ -109,7 +117,10 @@ function getFeatures() {
   analyser.getByteTimeDomainData(timeArray);
 
   let sum=0, low=0, mid=0, high=0, peak=0, zc=0, prev=128;
-  let fluxSum=0, prevSpectrum=new Float32Array(bufferLength);
+  let fluxSum=0; 
+  if(!getFeatures.prevSpectrum) getFeatures.prevSpectrum=new Float32Array(bufferLength);
+  const prevSpectrum = getFeatures.prevSpectrum;
+
   for(let i=0;i<dataArray.length;i++){
     const val = dataArray[i]; sum += val*val;
     if(i<dataArray.length*0.1) low+=val;
@@ -137,37 +148,52 @@ function getFeatures() {
   const tempoEst = rhythm*180;
   const tonality = bassRatio<0.5&&trebleRatio<0.5?0.7:0.3;
   const pitch = centroid;
-  return {energy,dynamicRange,centroid,spread,rhythm,bassRatio,midRatio,trebleRatio,zcr,spectralFlux,tempoEst,tonality,pitch};
+
+  let totalEnergy = dataArray.reduce((a,v)=>a+v,0);
+  let threshold = totalEnergy*0.85, cumulative=0, rolloff=0;
+  for(let i=0;i<dataArray.length;i++){cumulative+=dataArray[i]; if(cumulative>=threshold){rolloff=i/dataArray.length; break;}}
+  const geoMean = Math.exp(dataArray.reduce((a,v)=>a+Math.log(v+1),0)/dataArray.length);
+  const arithMean = totalEnergy/dataArray.length;
+  const flatness = geoMean/arithMean;
+  const crest = peak/(rms||1);
+
+  return {energy,dynamicRange,centroid,spread,rhythm,bassRatio,midRatio,trebleRatio,zcr,spectralFlux,tempoEst,tonality,pitch,rolloff,flatness,crest};
 }
 
 // ---------------- QUERY BUILDER ----------------
 function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
-function buildQuery(features){
-  if(!features) return "";
-  const scene = document.getElementById('sceneType').value;
-  let adjectives=[];
-  adjectives.push(pickRandom(features.energy>0.8?["explosive","vibrant"]:features.energy>0.5?["lively","uplifting"]:["calm","serene"]));
-  adjectives.push(pickRandom(features.dynamicRange>0.5?["dramatic","intense"]:["subtle","soft"]));
-  adjectives.push(pickRandom(features.centroid>0.7?["sparkling","shiny"]:features.centroid>0.4?["bright","soft-light"]:["muted","dark"]));
-  adjectives.push(pickRandom(features.spread>0.15?["textured","complex"]:["smooth","simple"]));
-  adjectives.push(pickRandom(features.tempoEst>120?["fast-paced","energetic"]:features.tempoEst>70?["moderate","steady"]:["slow","calm"]));
-  adjectives.push(pickRandom(features.rhythm>0.6?["pulsating","dynamic"]:["flowing","gentle"]));
-  adjectives.push(pickRandom(features.tonality>0.5?["melodic","harmonic"]:["ambient","airy"]));
-  adjectives.push(pickRandom(features.pitch>0.6?["high-pitched","treble-rich"]:features.pitch>0.3?["mid-range","balanced"]:["low-pitched","bass-heavy"]));
-  if(features.bassRatio>0.4) adjectives.push(pickRandom(["bass-heavy","club","deep", "dark"]));
-  else if(features.midRatio>0.4) adjectives.push(pickRandom(["vocal-centric","stage","concert"]));
-  else if(features.trebleRatio>0.4) adjectives.push(pickRandom(["airy","bright","open"]));
-  adjectives.push(pickRandom(features.zcr>0.1?["crisp","sharp"]:["soft","rounded"]));
 
-  // Add segment info to force unique query
-  const segment = Math.floor(mediaElement.currentTime/5);
+function buildQuery(features) {
+  if (!features) return "";
+  const scene = document.getElementById('sceneType').value;
+  let adjectives = [];
+  // Energy → mood
+  if (features.energy > 0.8) adjectives.push(pickRandom(["explosive","vibrant","ecstatic","stormy","fiery"]));
+  else if (features.energy > 0.5) adjectives.push(pickRandom(["uplifting","bouncy","bright","joyful","playful"]));
+  else adjectives.push(pickRandom(["calm","mellow","soothing","dreamy","serene"]));
+  // Dynamics
+  adjectives.push(pickRandom(features.dynamicRange > 0.5 ? 
+    ["dramatic","bold","thundering","eruptive"] : 
+    ["fragile","gentle","whispery","subtle"]));
+  // Timbre
+  adjectives.push(pickRandom(features.flatness > 0.5 ? 
+    ["noisy","gritty","rough","chaotic"] : 
+    ["smooth","velvety","airy","shimmering"]));
+  // Spectrum rolloff → warmth/brightness
+  adjectives.push(features.rolloff > 0.7 ? pickRandom(["bright","metallic","glassy"]) : pickRandom(["warm","dark","dusty"]));
+  // Crest factor → punchiness
+  adjectives.push(features.crest > 4 ? pickRandom(["punchy","snappy","percussive"]) : pickRandom(["soft","flowing","blended"]));
+  // Tempo
+  adjectives.push(features.tempoEst > 140 ? "fast-paced" : features.tempoEst > 90 ? "steady" : "slow");
+  const segment = Math.floor(mediaElement.currentTime / 5);
   return scene + " " + adjectives.join(" ") + " segment-" + segment;
 }
+
 
 // ---------------- SCRAPBOOK ----------------
 function pushImages(photos, query) {
   photos.forEach(p => {
-    if (usedImageIds.has(p.id)) return; // deduplicate
+    if (usedImageIds.has(p.id)) return;
     usedImageIds.add(p.id);
 
     const div = document.createElement('div');
@@ -179,12 +205,9 @@ function pushImages(photos, query) {
     div.appendChild(img);
 
     div.addEventListener('click', () => window.open(p.url, '_blank'));
-
-    // Prepend instead of append to show newest images at top
     gallery.prepend(div);
   });
 }
-
 
 async function generateScrapbook(){
   const features = getFeatures();
@@ -217,16 +240,17 @@ document.getElementById('file').addEventListener('change', e=>{
     const track = audioCtx.createMediaElementSource(mediaElement);
     connectSource(track);
 
-    // live player updates
     mediaElement.addEventListener('timeupdate', ()=>{
       const current = mediaElement.currentTime;
       const duration = mediaElement.duration || 0;
       currentTimeEl.textContent = formatTime(current);
       seekBar.value = duration>0 ? (current/duration)*100 : 0;
 
-      // live prompt
       const features = getFeatures();
-      if(features) livePromptEl.textContent = buildQuery(features);
+      if(features) {
+        livePromptEl.textContent = buildQuery(features);
+        moodLabel.textContent = "Mood: " + (features.energy>0.7?"🔥 Energetic":features.tempoEst<80?"🌊 Chill":"⚡ Balanced");
+      }
     });
 
     mediaElement.play();
@@ -239,6 +263,45 @@ seekBar.addEventListener('input', ()=>{ if(!mediaElement) return; mediaElement.c
 document.getElementById('playBtn').addEventListener('click', async ()=>{ if(!audioCtx) return; if(audioCtx.state==='suspended') await audioCtx.resume(); mediaElement?.play(); });
 document.getElementById('pauseBtn').addEventListener('click', ()=>mediaElement?.pause());
 document.getElementById('genBtn').addEventListener('click', generateScrapbook);
+
+// ---------------- VISUALIZER ----------------
+function drawSpectrum() {
+  if(!analyser) {requestAnimationFrame(drawSpectrum); return;}
+  const spectrumCanvas = document.getElementById('spectrum');
+  const waveCanvas = document.getElementById('waveform');
+  const spectrumCtx = spectrumCanvas.getContext('2d');
+  const waveCtx = waveCanvas.getContext('2d');
+
+  analyser.getByteFrequencyData(dataArray);
+  analyser.getByteTimeDomainData(timeArray);
+
+  // Spectrum
+  spectrumCtx.clearRect(0,0,spectrumCanvas.width,spectrumCanvas.height);
+  const barWidth = (spectrumCanvas.width / dataArray.length)*2;
+  let x = 0;
+  for (let i=0;i<dataArray.length;i+=4){
+    const barHeight = dataArray[i]/2;
+    spectrumCtx.fillStyle = "#6ee7ff";
+    spectrumCtx.fillRect(x, spectrumCanvas.height-barHeight, barWidth, barHeight);
+    x += barWidth+1;
+  }
+
+  // Waveform
+  waveCtx.clearRect(0,0,waveCanvas.width,waveCanvas.height);
+  waveCtx.beginPath();
+  waveCtx.moveTo(0, waveCanvas.height/2);
+  for (let i=0;i<timeArray.length;i++){
+    const y = (timeArray[i]/255.0)*waveCanvas.height;
+    const xpos = (i/timeArray.length)*waveCanvas.width;
+    waveCtx.lineTo(xpos,y);
+  }
+  waveCtx.strokeStyle = "#6ee7ff";
+  waveCtx.lineWidth = 2;
+  waveCtx.stroke();
+
+  requestAnimationFrame(drawSpectrum);
+}
+drawSpectrum();
 </script>
 </body>
 </html>
